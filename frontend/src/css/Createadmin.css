@@ -1,0 +1,52 @@
+.admin-container {
+    max-width: 400px;
+    margin: 80px auto;
+    padding: 30px;
+    background-color: #fff;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    color: #6a00ff;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  
+  .admin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .admin-form input {
+    padding: 12px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    outline: none;
+    transition: border 0.3s;
+  }
+  
+  .admin-form input:focus {
+    border-color: #6a00ff;
+  }
+  
+  .admin-form button {
+    padding: 12px;
+    font-size: 16px;
+    background-color: #6a00ff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  .admin-form button:hover {
+    background-color: #4d00c2;
+  }
+  
+  .admin-message {
+    margin-top: 15px;
+    font-weight: bold;
+    color: #333;
+  }
+  
