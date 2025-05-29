@@ -6,6 +6,8 @@ import ChatBot from "../components/ChatBot";
 import jsPDF from "jspdf";
 import "../css/Summary.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 export default function Summary() {
   const [summaries, setSummaries] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
@@ -16,7 +18,7 @@ export default function Summary() {
 
     const fetchSummaries = async () => {
       try {
-        const res = await fetch("https://koomind-backend.onrender.com/api/summary/all", {
+        const res = await fetch(`${API_BASE_URL}/summary/all`, {
           headers: {
             Authorization: `Bearer ${getToken()}`,
           },
@@ -59,7 +61,7 @@ export default function Summary() {
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`https://koomind-backend.onrender.com/api/summary/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/summary/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${getToken()}`,

@@ -14,6 +14,8 @@ import {
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { name, role } = getUserInfo();
@@ -28,9 +30,9 @@ export default function Dashboard() {
 
     const fetchSummaries = async () => {
       try {
-        const endpoint = role === "admin" ? "/api/summary/all" : "/api/summary";
+        const endpoint = role === "admin" ? "/summary/all" : "/summary";
 
-        const res = await fetch(`https://koomind-backend.onrender.com${endpoint}`, {
+        const res = await fetch(`${API_BASE_URL}${endpoint}`, {
           headers: {
             Authorization: `Bearer ${getToken()}`,
           },
@@ -105,7 +107,7 @@ export default function Dashboard() {
 
   const saveSummaryToBackend = async (summary) => {
     try {
-      await fetch(`https://koomind-backend.onrender.com/api/summary/${summary._id}`, {
+      await fetch(`${API_BASE_URL}/summary/${summary._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

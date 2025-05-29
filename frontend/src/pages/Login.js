@@ -4,6 +4,8 @@ import axios from "axios";
 import { setToken, setUserInfo } from "../auth";
 import "../css/Login.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -15,7 +17,7 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await axios.post("https://koomind-backend.onrender.com/api/login", {
+      const res = await axios.post(`${API_BASE_URL}/login`, {
         email,
         password,
       });
@@ -31,8 +33,8 @@ export default function Login() {
         return;
       }
 
-      setToken(token); // Save JWT to localStorage
-      setUserInfo({ name, role, userId }); // Save name, role, ID
+      setToken(token);
+      setUserInfo({ name, role, userId });
       navigate("/dashboard");
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);

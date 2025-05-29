@@ -3,6 +3,8 @@ import "../css/Createadmin.css";
 import Menu from "../components/Menu";
 import ChatBot from "../components/ChatBot";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 export default function CreateAdmin() {
   const [form, setForm] = useState({
     name: "",
@@ -23,7 +25,7 @@ export default function CreateAdmin() {
     setMessage("");
 
     try {
-      const res = await fetch("https://koomind-backend.onrender.com/api/create-user", {
+      const res = await fetch(`${API_BASE_URL}/create-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

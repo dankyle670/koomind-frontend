@@ -5,9 +5,10 @@ import Menu from "../components/Menu";
 import ChatBot from "../components/ChatBot";
 import "../css/Profile.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 export default function Profile() {
   const navigate = useNavigate();
-  //const { name, role } = getUserInfo();
   const [user, setUser] = useState({
     name: "",
     email: "",
@@ -23,7 +24,7 @@ export default function Profile() {
 
     const fetchProfile = async () => {
       try {
-        const res = await fetch("https://koomind-backend.onrender.com/api/me", {
+        const res = await fetch(`${API_BASE_URL}/me`, {
           headers: {
             Authorization: `Bearer ${getToken()}`,
           },
@@ -49,7 +50,7 @@ export default function Profile() {
 
   const handleSave = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/me", {
+      const res = await fetch(`${API_BASE_URL}/me`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -5,6 +5,8 @@ import Menu from "../components/Menu";
 import ChatBot from "../components/ChatBot";
 import "../css/AdminPanel.css";
 
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
 export default function AdminPanel() {
   const [admins, setAdmins] = useState([]);
   const { userId } = getUserInfo();
@@ -15,7 +17,7 @@ export default function AdminPanel() {
 
     const fetchAdmins = async () => {
       try {
-        const res = await fetch("https://koomind-backend.onrender.com/api/admins", {
+        const res = await fetch(`${API_BASE_URL}/admins`, {
           headers: {
             Authorization: `Bearer ${getToken()}`,
           },
@@ -38,7 +40,7 @@ export default function AdminPanel() {
     if (!window.confirm("Are you sure you want to delete this admin?")) return;
 
     try {
-      const res = await fetch(`https://koomind-backend.onrender.com/api/user/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/user/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${getToken()}`,
@@ -65,7 +67,7 @@ export default function AdminPanel() {
     if (!newName || newName === currentName) return;
 
     try {
-      const res = await fetch(`https://koomind-backend.onrender.com/api/user/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/user/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -94,7 +96,7 @@ export default function AdminPanel() {
     }
 
     try {
-      const res = await fetch(`https://koomind-backend.onrender.com/api/user/reset-password`, {
+      const res = await fetch(`${API_BASE_URL}/user/reset-password`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
