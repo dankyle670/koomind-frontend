@@ -1,0 +1,9 @@
+node_modules/
+.cache/
+*.pack
+*.log
+*.webm
+.env
+.vite/
+dist/
+.DS_Store
