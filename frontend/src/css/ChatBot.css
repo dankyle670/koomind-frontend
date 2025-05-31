@@ -1,5 +1,4 @@
 /* src/css/ChatBot.css */
-
 .chatbot-button {
   position: fixed;
   bottom: 20px;
@@ -96,4 +95,49 @@
   padding: 10px 14px;
   cursor: pointer;
 }
-  
+
+/* Mobile optimization */
+
+@media (max-width: 480px) {
+  .chatbot-button {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .chatbot-window {
+    right: 10px;
+    left: 10px;
+    bottom: 80px;
+    width: auto;
+    max-height: 70vh;
+    border-radius: 12px;
+  }
+
+  .chatbot-header {
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  .chatbot-messages {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .chat-message {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .chatbot-input input {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .chatbot-input button {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}

@@ -171,3 +171,78 @@
   height: 18px;
 }
 
+/* Mobile optimization */
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 30px 12px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 22px;
+  }
+
+  .dashboard-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .dashboard-actions button {
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  .dashboard-section {
+    padding: 20px;
+    margin: 20px auto;
+  }
+
+  .dashboard-section h2 {
+    font-size: 18px;
+    margin-bottom: 15px;
+  }
+
+  .chart-wrapper {
+    width: 100%;
+    height: auto;
+  }
+
+  .member-table th,
+  .member-table td {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .activity-feed li span {
+    font-size: 13px;
+  }
+
+  .task-summary h3 {
+    font-size: 16px;
+  }
+
+  .task-form {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .task-form input,
+  .task-form button {
+    width: 100%;
+    font-size: 14px;
+  }
+
+  .task-checkbox {
+    font-size: 14px;
+  }
+
+  .task-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .delete-task {
+    font-size: 14px;
+  }
+}
+

@@ -95,3 +95,54 @@
 .delete-btn:hover {
   color: #be123c;
 }
+
+/* Mobile optimization */
+
+@media (max-width: 480px) {
+  .summary-page {
+    padding: 30px 12px;
+  }
+
+  .summary-page h1 {
+    font-size: 24px;
+    text-align: center;
+  }
+
+  .summary-card {
+    padding: 18px;
+  }
+
+  .summary-card h2,
+  .summary-title {
+    font-size: 18px;
+  }
+
+  .summary-card p {
+    font-size: 14px;
+  }
+
+  .summary-card ul {
+    padding-left: 18px;
+  }
+
+  .summary-card li {
+    font-size: 14px;
+  }
+
+  .summary-card button {
+    width: 100%;
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .summary-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .delete-btn {
+    font-size: 16px;
+    align-self: flex-end;
+  }
+}

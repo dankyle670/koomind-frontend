@@ -13,7 +13,7 @@ export default function ChatBot() {
     const userMessage = { sender: "user", text: input };
     const botMessage = {
       sender: "bot",
-      text: "🤖 AI response will go here (connect to backend later)",
+      text: "🤖 AI response will go here (connect to backend later :)- )",
     };
 
     setMessages((prev) => [...prev, userMessage, botMessage]);

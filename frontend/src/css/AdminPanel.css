@@ -50,3 +50,23 @@
   color: white;
   transition: background-color 0.2s;
 }
+
+/* Mobile optimization */
+
+@media (max-width: 480px) {
+  .admin-container {
+    margin: 40px 12px;
+    padding: 20px;
+  }
+
+  .admin-form input,
+  .admin-form button {
+    font-size: 15px;
+    padding: 10px;
+  }
+
+  .admin-message {
+    font-size: 14px;
+  }
+}
+
