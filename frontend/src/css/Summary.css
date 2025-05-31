@@ -97,52 +97,83 @@
 }
 
 /* Mobile optimization */
-
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .summary-page {
-    padding: 30px 12px;
-  }
-
-  .summary-page h1 {
-    font-size: 24px;
-    text-align: center;
+    padding: 40px 15px;
   }
 
   .summary-card {
-    padding: 18px;
+    padding: 20px;
+    width: 100%;
+    margin-bottom: 20px;
   }
 
-  .summary-card h2,
-  .summary-title {
+  .summary-card h2 {
     font-size: 18px;
   }
 
-  .summary-card p {
-    font-size: 14px;
-  }
-
+  .summary-card p,
   .summary-card ul {
-    padding-left: 18px;
-  }
-
-  .summary-card li {
     font-size: 14px;
   }
 
   .summary-card button {
     width: 100%;
-    font-size: 14px;
-    padding: 10px;
-  }
-
-  .summary-title-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .delete-btn {
+    padding: 12px;
     font-size: 16px;
-    align-self: flex-end;
+  }
+}
+/* Responsive adjustments for smaller screens */
+@media (max-width: 480px) {
+  .summary-page h1 {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .summary-card {
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  .summary-card h2 {
+    font-size: 16px;
+  }
+
+  .summary-card p,
+  .summary-card ul {
+    font-size: 14px;
+  }
+
+  .summary-card button {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+  }
+}
+/* Adjustments for very small screens */
+@media (max-width: 360px) {
+  .summary-page h1 {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+
+  .summary-card {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .summary-card h2 {
+    font-size: 14px;
+  }
+
+  .summary-card p,
+  .summary-card ul {
+    font-size: 12px;
+  }
+
+  .summary-card button {
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
   }
 }

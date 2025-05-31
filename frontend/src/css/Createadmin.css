@@ -51,13 +51,10 @@
     margin: 40px 12px;
     padding: 20px;
   }
-
   .admin-form input,
   .admin-form button {
     font-size: 15px;
-    padding: 10px;
   }
-
   .admin-message {
     font-size: 14px;
   }

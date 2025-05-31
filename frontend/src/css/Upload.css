@@ -120,46 +120,55 @@
 }
 
 /* Mobile optimization */
-
 @media (max-width: 480px) {
   .upload-container {
-    padding: 30px 12px;
-  }
-  .upload-container h1 {
-    font-size: 24px;
-  }
-  .upload-container p {
-    font-size: 13px;
-    text-align: center;
+    padding: 40px 15px;
   }
   .dropzone {
-    padding: 25px;
-    font-size: 14px;
-  }
-  .upload-container button {
     width: 100%;
-    font-size: 15px;
-    padding: 12px;
+    padding: 30px;
   }
   .upload-card {
     padding: 20px;
+    margin-bottom: 20px;
   }
   .upload-card h2 {
     font-size: 18px;
   }
-  .record-buttons button {
+  .upload-container button {
     width: 100%;
+    padding: 12px;
     font-size: 14px;
-    padding: 10px;
   }
-  .upload-card input,
-  .upload-card textarea {
-    font-size: 13px;
-    padding: 8px;
+}
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .upload-container h1 {
+    font-size: 28px;
   }
-  .upload-card button {
-    width: 100%;
-    font-size: 15px;
-    padding: 10px;
+  .upload-container p {
+    font-size: 12px;
+  }
+  .dropzone {
+    width: 95%;
+    padding: 30px;
+  }
+  .upload-card {
+    width: 90%;
+    padding: 20px;
+  }
+}
+@media (max-width: 600px) {
+  .upload-container h1 {
+    font-size: 24px;
+  }
+  .upload-container p {
+    font-size: 12px;
+  }
+  .dropzone {
+    padding: 20px;
+  }
+  .upload-card {
+    padding: 15px;
   }
 }
