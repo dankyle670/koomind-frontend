@@ -96,6 +96,57 @@
   cursor: pointer;
 }
 
+.chat-toast {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  background-color: #10b981;
+  color: white;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  animation: fadeInOut 3s ease forwards;
+  z-index: 999;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.email-preview {
+  background-color: black;
+  border-left: 4px solid #006eff;
+  padding: 8px 12px;
+  margin: 10px 0;
+  font-size: 0.9rem;
+  color: white;
+}
+
+.email-body-preview {
+  background: grey;
+  border: 1px solid black;
+  padding: 8px;
+  margin-top: 5px;
+  white-space: pre-wrap;
+}
+
+
 /* Mobile optimization */
 
 @media (max-width: 480px) {
