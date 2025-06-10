@@ -6,6 +6,7 @@ import Summary from "./pages/Summary";
 import CreateAdmin from "./pages/CreateAdmin";
 import Profile from "./pages/Profile";
 import AdminPanel from "./pages/AdminPanel";
+import Convert from "./pages/Convert"
 
 function App() {
   return (
@@ -18,6 +19,8 @@ function App() {
         <Route path="/create-admin" element={<CreateAdmin />} />
         <Route path="/profile" element={<Profile/>} />
         <Route path="/admin-panel" element={<AdminPanel />} />
+        <Route path="/convert" element={<Convert />} />
+        
       </Routes>
     </Router>
   );

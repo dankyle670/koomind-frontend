@@ -13,6 +13,7 @@ export default function Upload() {
   const [recording, setRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [aiResult, setAiResult] = useState(null);
   const [summaryTitle, setSummaryTitle] = useState("");
   const [audioId, setAudioId] = useState(null);
@@ -25,9 +26,10 @@ export default function Upload() {
   }, [navigate]);
 
   const uploadAudioToServer = async (audioBlobOrFile) => {
-    console.log("📤 [uploadAudioToServer] called with:", audioBlobOrFile);
+    console.log("[uploadAudioToServer] called with:", audioBlobOrFile);
     const formData = new FormData();
     formData.append("audio", audioBlobOrFile);
+    setUploading(true);
 
     try {
       const uploadRes = await fetch(`${API_BASE}/upload`, {
@@ -40,23 +42,25 @@ export default function Upload() {
 
       if (!uploadRes.ok) {
         const errorText = await uploadRes.text();
-        console.error("❌ [uploadAudioToServer] Upload failed with response:", errorText);
+        console.error("[uploadAudioToServer] Upload failed with response:", errorText);
         throw new Error("Upload failed.");
       }
 
       const uploadData = await uploadRes.json();
-      console.log("✅ [uploadAudioToServer] Upload response:", uploadData);
+      console.log("[uploadAudioToServer] Upload response:", uploadData);
       setAudioId(uploadData.id);
     } catch (err) {
-      console.error("❌ [uploadAudioToServer] Error:", err);
+      console.error("[uploadAudioToServer] Error:", err);
       throw err;
+    } finally {
+      setUploading(false);
     }
   };
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
     setFile(file);
-    console.log("📥 [onDrop] File dropped:", file);
+    console.log("[onDrop] File dropped:", file);
     uploadAudioToServer(file).catch((err) =>
       alert("Error uploading file: " + err.message)
     );
@@ -81,7 +85,7 @@ export default function Upload() {
 
       mediaRecorder.onstop = async () => {
         const blob = new Blob(audioChunks.current, { type: "audio/webm" });
-        console.log("🎤 [onstop] Recorded blob created:", blob);
+        console.log("[onstop] Recorded blob created:", blob);
         setRecordedBlob(blob);
 
         const recordedFile = new File([blob], "recording.webm", {
@@ -97,47 +101,35 @@ export default function Upload() {
       };
 
       mediaRecorder.start();
-      console.log("🎙️ [handleStartRecording] Recording started...");
+      console.log("[handleStartRecording] Recording started...");
       setRecording(true);
     } catch (err) {
-      console.error("❌ [handleStartRecording] Error accessing microphone:", err);
+      console.error("[handleStartRecording] Error accessing microphone:", err);
       alert("Cannot access microphone: " + err.message);
     }
   };
 
   const handleStopRecording = () => {
-    console.log("⏹️ [handleStopRecording] Stopping recording...");
+    console.log("[handleStopRecording] Stopping recording...");
     mediaRecorderRef.current.stop();
     setRecording(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("🚀 [handleSubmit] Called with audioId:", audioId);
-    if (!audioId) {
-      alert("No transcript available to summarize.");
-      return;
-    }
+    if (!audioId) return alert("No transcript available to summarize.");
 
     try {
       setLoading(true);
-      console.log("🧠 [handleSubmit] Requesting summary from /api/summarize/" + audioId);
-
       const summaryRes = await fetch(`${API_BASE}/summarize/${audioId}`);
-      if (!summaryRes.ok) {
-        const errorText = await summaryRes.text();
-        console.error("❌ [handleSubmit] Summarization failed:", errorText);
-        throw new Error("Summarization failed.");
-      }
-
+      if (!summaryRes.ok) throw new Error("Summarization failed.");
       const summaryData = await summaryRes.json();
-      console.log("✅ [handleSubmit] Received summary:", summaryData);
       setAiResult({
         summary: summaryData.summary,
         objectives: summaryData.objectives,
+        questions: summaryData.questions || [],
       });
     } catch (err) {
-      console.error("❌ [handleSubmit] Error:", err);
       alert("Error: " + err.message);
     } finally {
       setLoading(false);
@@ -145,13 +137,9 @@ export default function Upload() {
   };
 
   const handleSave = async () => {
-    if (!summaryTitle.trim()) {
-      alert("Please provide a title for your summary.");
-      return;
-    }
+    if (!summaryTitle.trim()) return alert("Please provide a title for your summary.");
 
     try {
-      console.log("💾 [handleSave] Saving summary...");
       const res = await fetch(`${API_BASE}/summary`, {
         method: "POST",
         headers: {
@@ -162,19 +150,14 @@ export default function Upload() {
           title: summaryTitle,
           summary: aiResult.summary,
           objectives: aiResult.objectives,
+          questions: aiResult.questions,
         }),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Unknown error");
-      }
-
-      console.log("✅ [handleSave] Summary saved successfully.");
+      if (!res.ok) throw new Error("Failed to save summary");
       navigate("/summary");
     } catch (err) {
-      console.error("❌ [handleSave] Save failed:", err);
-      alert("❌ Failed to save summary:\n" + err.message);
+      alert("Failed to save summary:\n" + err.message);
     }
   };
 
@@ -192,6 +175,7 @@ export default function Upload() {
                 <input {...getInputProps()} />
                 {file ? <p className="filename">✔️ {file.name}</p> : <p>Drag & drop .mp3/.wav here</p>}
               </div>
+              {uploading && <p style={{ color: "gray" }}>⏳ Processing audio, please wait...</p>}
             </div>
 
             <div className="upload-card">
@@ -212,11 +196,11 @@ export default function Upload() {
               </div>
             </div>
 
-            <button onClick={handleSubmit} disabled={!audioId || loading}>
+            <button onClick={handleSubmit} disabled={!audioId || loading || uploading}>
               🚀 Send to KOOmind.ia
             </button>
 
-            {loading && <p>⏳ Processing audio, please wait...</p>}
+            {loading && <p>⏳ Summarizing meeting notes...</p>}
           </>
         )}
 
@@ -247,6 +231,20 @@ export default function Upload() {
               }
               rows="6"
             />
+
+            <label>Questions & Suggestions:</label>
+            <div style={{ backgroundColor: "#f9f9f9", border: "1px solid #ddd", padding: "1rem", borderRadius: "6px" }}>
+              {aiResult.questions.length === 0 ? (
+                <p style={{ fontStyle: "italic" }}>No questions found in the meeting.</p>
+              ) : (
+                aiResult.questions.map((q, i) => (
+                  <div key={i} style={{ marginBottom: "1rem" }}>
+                    <strong>❓ {q.question}</strong>
+                    <p style={{ marginLeft: "1rem" }}>💡 {q.suggestion}</p>
+                  </div>
+                ))
+              )}
+            </div>
 
             <button onClick={handleSave}>💾 Save & View</button>
           </div>
