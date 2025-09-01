@@ -5,12 +5,7 @@ import Menu from "../components/Menu";
 import ChatBot from "../components/ChatBot";
 import "../css/Dashboard.css";
 import { Doughnut } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 

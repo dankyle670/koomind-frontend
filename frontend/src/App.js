@@ -7,6 +7,7 @@ import CreateAdmin from "./pages/CreateAdmin";
 import Profile from "./pages/Profile";
 import AdminPanel from "./pages/AdminPanel";
 import Convert from "./pages/Convert"
+import Messenger from "./pages/Messenger";
 
 function App() {
   return (
@@ -20,7 +21,7 @@ function App() {
         <Route path="/profile" element={<Profile/>} />
         <Route path="/admin-panel" element={<AdminPanel />} />
         <Route path="/convert" element={<Convert />} />
-        
+        <Route path="/messenger" element={<Messenger />} />
       </Routes>
     </Router>
   );

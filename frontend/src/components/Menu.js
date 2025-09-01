@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { logout } from "../auth";
+import { logout, getUserInfo } from "../auth";
 import { useState, useEffect } from "react";
 import "../css/Menu.css";
 
@@ -8,12 +8,15 @@ export default function Menu() {
   const [open, setOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  const userInfo = getUserInfo();
+  const role = userInfo?.role || "user"; // si pas défini = "user"
+
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
-  // Handle screen resize to detect mobile
+  // Détection mobile
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -38,8 +41,15 @@ export default function Menu() {
           <li onClick={() => navigate("/upload")}>📤 Upload</li>
           <li onClick={() => navigate("/summary")}>📑 Summaries</li>
           <li onClick={() => navigate("/profile")}>👤 Profile</li>
-          <li onClick={() => navigate("/admin-panel")}>🛠️ Admin Panel</li>
-          <li onClick={() => navigate("/create-admin")}>➕ Create Admin</li>
+          <li onClick={() => navigate("/messenger")}>💬 Messenger</li>
+
+          {/* ✅ Visible uniquement pour les admins */}
+          {role === "admin" && (
+            <>
+              <li onClick={() => navigate("/admin-panel")}>🛠️ Admin Panel</li>
+              <li onClick={() => navigate("/create-admin")}>➕ Create Admin</li>
+            </>
+          )}
         </ul>
 
         <div className="menu-right">

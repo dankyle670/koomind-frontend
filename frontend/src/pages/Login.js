@@ -1,3 +1,4 @@
+// src/pages/Login.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -17,6 +18,7 @@ export default function Login() {
     setError("");
 
     try {
+      // Envoi des identifiants
       const res = await axios.post(`${API_BASE_URL}/login`, {
         email,
         password,
@@ -24,21 +26,20 @@ export default function Login() {
 
       const { token, userId, name, role } = res.data;
 
+      // Vérification du token
       if (!token || !userId) {
-        throw new Error("Missing token or user ID in response.");
+        throw new Error("Le token ou l'ID utilisateur est manquant dans la réponse.");
       }
-
-      if (role !== "admin") {
-        setError("Access denied. Admins only.");
-        return;
-      }
-
+      // Stockage dans le localStorage
       setToken(token);
       setUserInfo({ name, role, userId });
-      navigate("/dashboard");
+      console.log("✅ Login successful:", { token, userId, name, role });
+
+      // Redirection vers Messenger ou Dashboard
+      navigate("/Dashboard");
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);
-      setError("❌ Invalid credentials or server error.");
+      setError("❌ Identifiants invalides ou erreur serveur.");
     }
   };
 
@@ -46,7 +47,7 @@ export default function Login() {
     <div className="login-container">
       <div className="login-card">
         <h1>🛡️ Admin Portal</h1>
-        <p>Enter your credentials to access the platform.</p>
+        <p>Entrez vos identifiants pour accéder à la plateforme.</p>
 
         {error && <div className="login-error">{error}</div>}
 
@@ -60,12 +61,12 @@ export default function Login() {
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Mot de passe"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <button type="submit">Access Dashboard</button>
+          <button type="submit">Se connecter</button>
         </form>
       </div>
     </div>
