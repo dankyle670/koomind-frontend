@@ -1,11 +1,9 @@
 // src/pages/Login.js
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { setToken, setUserInfo } from "../auth";
+import axios from "../api"; // <- utilise api.js avec interceptors
+import { setToken, setRefreshToken, setUserInfo } from "../auth";
 import "../css/Login.css";
-
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,24 +16,22 @@ export default function Login() {
     setError("");
 
     try {
-      // Envoi des identifiants
-      const res = await axios.post(`${API_BASE_URL}/login`, {
-        email,
-        password,
-      });
+      const res = await axios.post("/login", { email, password });
 
-      const { token, userId, name, role } = res.data;
+      const { accessToken, refreshToken, userId, name, role } = res.data;
 
-      // Vérification du token
-      if (!token || !userId) {
-        throw new Error("Le token ou l'ID utilisateur est manquant dans la réponse.");
+      if (!accessToken || !refreshToken || !userId) {
+        throw new Error("Token ou ID utilisateur manquant dans la réponse.");
       }
-      // Stockage dans le localStorage
-      setToken(token);
-      setUserInfo({ name, role, userId });
-      console.log("✅ Login successful:", { token, userId, name, role });
 
-      // Redirection vers Messenger ou Dashboard
+      // Stockage dans le localStorage
+      setToken(accessToken);
+      setRefreshToken(refreshToken);
+      setUserInfo({ name, role, userId });
+
+      console.log("✅ Login successful:", { userId, name, role });
+
+      // Redirection vers le Dashboard
       navigate("/Dashboard");
     } catch (err) {
       console.error("Login failed:", err.response?.data || err.message);
