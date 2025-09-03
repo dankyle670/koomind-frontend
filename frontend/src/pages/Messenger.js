@@ -162,36 +162,21 @@ export default function Messenger() {
 
   // --- ENVOI MESSAGE
   const sendMessage = () => {
-    if (!input.trim() || !activeConv || !socketRef.current) return;
+  if (!input.trim() || !activeConv || !socketRef.current) return;
 
-    const messageData = {
-      _id: Math.random().toString(36).substr(2, 9), // id temporaire
-      conversation: activeConv._id,
-      author: { _id: userId, name: getUserInfo().name },
-      authorId: userId,
-      text: input.trim(),
-      createdAt: new Date().toISOString(),
-    };
-
-    // Envoyer via socket
-    socketRef.current.emit("message", messageData);
-
-    // Ajouter localement pour affichage instantané
-    setActiveConv((prev) => ({
-      ...prev,
-      messages: [...(prev.messages || []), messageData],
-    }));
-
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv._id === activeConv._id
-          ? { ...conv, messages: [...(conv.messages || []), messageData] }
-          : conv
-      )
-    );
-
-    setInput("");
+  const messageData = {
+    conversation: activeConv._id,
+    author: { _id: userId, name: getUserInfo().name },
+    authorId: userId,
+    text: input.trim(),
+    createdAt: new Date().toISOString(),
   };
+
+  // Envoyer via socket seulement
+  socketRef.current.emit("message", messageData);
+
+  setInput("");
+};
 
   // --- CREATE CHANNEL / PRIVATE conversation
   const createChannel = async () => {
