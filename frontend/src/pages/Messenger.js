@@ -27,14 +27,14 @@ export default function Messenger() {
   const audioRef = useRef(new Audio(notificationSoundFile));
   const navigate = useNavigate();
 
-  // --- Jouer le son
+  // --- Jouer le son de notification
   const playNotificationSound = () => {
     const audio = audioRef.current;
     audio.currentTime = 0;
     audio.play().catch((err) => console.warn("Erreur lecture son:", err));
   };
 
-  // --- Initialisation socket (une seule fois)
+  // --- Initialisation du socket
   useEffect(() => {
     if (!getToken()) return;
 
@@ -55,35 +55,28 @@ export default function Messenger() {
               messages: [...(conv.messages || []), newMessage],
             };
 
-            // Mettre à jour activeConv si nécessaire
+            // Mettre à jour activeConv si c’est la conversation active
             setActiveConv((prevActive) => {
-              if (prevActive?._id === updatedConv._id) {
-                return updatedConv;
-              }
+              if (prevActive?._id === updatedConv._id) return updatedConv;
               return prevActive;
             });
 
-            // Si ce n’est pas la conversation active, incrémenter compteur + notifications
-            setUnreadCounts((prev) => {
-              if (activeConv?._id !== updatedConv._id) {
-                // Notifications
-                if ("Notification" in window && Notification.permission === "granted") {
-                  new Notification(
-                    `Nouveau message${
-                      updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
-                    }`,
-                    { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
-                  );
-                }
+            // Notifications et unreadCounts
+            const isActive = activeConv?._id === updatedConv._id;
+            const shouldNotify = !isActive && newMessage.author?._id !== userId;
+            if (shouldNotify) {
+              setUnreadCounts((prev) => ({
+                ...prev,
+                [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
+              }));
+              if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(
+                  `Nouveau message${updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""}`,
+                  { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
+                );
                 playNotificationSound();
-
-                return {
-                  ...prev,
-                  [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
-                };
               }
-              return prev;
-            });
+            }
 
             return updatedConv;
           }
@@ -99,58 +92,56 @@ export default function Messenger() {
     return () => {
       socketRef.current.disconnect();
     };
-  }, []); // ⚠️ Vide pour ne créer qu’une seule fois
+  }, []); // une seule fois
 
   // --- Fetch conversations
-useEffect(() => {
-  if (!getToken()) return navigate("/login");
+  useEffect(() => {
+    if (!getToken()) return navigate("/login");
 
-  const fetchConversations = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
-      });
-      if (!res.ok) throw new Error("Unauthorized");
-      const data = await res.json();
+    const fetchConversations = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
+          headers: { Authorization: `Bearer ${getToken()}` },
+        });
+        if (!res.ok) throw new Error("Unauthorized");
+        const data = await res.json();
 
-      // Mettre à jour conversations
-      setConversations(data);
+        setConversations(data);
 
-      // Mettre la première conversation active
-      if (data.length > 0) setActiveConv(data[0]);
+        if (data.length > 0) setActiveConv(data[0]);
 
-      // Mettre à jour les unreadCounts et notifications pour messages manquants
-      const newUnreadCounts = {};
-      data.forEach((conv) => {
-        const unreadMessages = conv.messages?.filter(
-          (msg) => !msg.read && msg.author?._id !== userId
-        ) || [];
-        if (unreadMessages.length > 0) {
-          newUnreadCounts[conv._id] = unreadMessages.length;
-
-          // Notifications
-          if ("Notification" in window && Notification.permission === "granted") {
-            unreadMessages.forEach((msg) =>
-              new Notification(
-                `Nouveau message${conv.type === "channel" ? " dans #" + conv.name : ""}`,
-                { body: `${msg.author?.name || "Utilisateur"}: ${msg.text}` }
-              )
-            );
+        // Calcul des messages non lus
+        const newUnreadCounts = {};
+        data.forEach((conv) => {
+          const unreadMessages =
+            conv.messages?.filter(
+              (msg) => !msg.seenBy?.includes(userId) && msg.author?._id !== userId
+            ) || [];
+          if (unreadMessages.length > 0) {
+            newUnreadCounts[conv._id] = unreadMessages.length;
+            // Notifications pour messages non lus
+            if ("Notification" in window && Notification.permission === "granted") {
+              unreadMessages.forEach((msg) =>
+                new Notification(
+                  `Nouveau message${conv.type === "channel" ? " dans #" + conv.name : ""}`,
+                  { body: `${msg.author?.name || "Utilisateur"}: ${msg.text}` }
+                )
+              );
+            }
           }
-        }
-      });
-      setUnreadCounts(newUnreadCounts);
-    } catch (err) {
-      console.error("❌ Erreur fetch conversations:", err);
-      logout();
-      navigate("/login");
-    }
-  };
+        });
+        setUnreadCounts(newUnreadCounts);
+      } catch (err) {
+        console.error("❌ Erreur fetch conversations:", err);
+        logout();
+        navigate("/login");
+      }
+    };
 
-  fetchConversations();
-}, [navigate, userId]);
+    fetchConversations();
+  }, [navigate, userId]);
 
-  // --- Fetch users
+  // --- Fetch utilisateurs
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -166,7 +157,7 @@ useEffect(() => {
     fetchUsers();
   }, [userId]);
 
-  // --- Join/leave rooms
+  // --- Rejoindre / quitter rooms
   useEffect(() => {
     if (!activeConv || !socketRef.current) return;
 
@@ -177,8 +168,14 @@ useEffect(() => {
     socketRef.current.emit("join", activeConv._id);
     currentRoomRef.current = activeConv._id;
 
-    // Reset unread pour la conversation active
+    // Reset unread pour conversation active
     setUnreadCounts((prev) => ({ ...prev, [activeConv._id]: 0 }));
+
+    // Marquer les messages comme lus côté serveur
+    fetch(`${API_BASE_URL}/messenger/conversations/${activeConv._id}/seen`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${getToken()}` },
+    }).catch((err) => console.error("❌ Erreur PUT seenBy:", err));
   }, [activeConv]);
 
   // --- Auto scroll
@@ -186,25 +183,23 @@ useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConv?.messages]);
 
-  // --- ENVOI MESSAGE
+  // --- Envoi message
   const sendMessage = () => {
-  if (!input.trim() || !activeConv || !socketRef.current) return;
+    if (!input.trim() || !activeConv || !socketRef.current) return;
 
-  const messageData = {
-    conversation: activeConv._id,
-    author: { _id: userId, name: getUserInfo().name },
-    authorId: userId,
-    text: input.trim(),
-    createdAt: new Date().toISOString(),
+    const messageData = {
+      conversation: activeConv._id,
+      author: { _id: userId, name: getUserInfo().name },
+      authorId: userId,
+      text: input.trim(),
+      createdAt: new Date().toISOString(),
+    };
+
+    socketRef.current.emit("message", messageData);
+    setInput("");
   };
 
-  // Envoyer via socket seulement
-  socketRef.current.emit("message", messageData);
-
-  setInput("");
-};
-
-  // --- CREATE CHANNEL / PRIVATE conversation
+  // --- Création channel
   const createChannel = async () => {
     if (!newConvName.trim() || selectedUsers.length === 0) {
       alert("Veuillez saisir un nom et sélectionner au moins un utilisateur !");
@@ -237,6 +232,7 @@ useEffect(() => {
     }
   };
 
+  // --- Création conversation privée
   const createPrivateConversation = async () => {
     if (!selectedUser) return;
     try {
@@ -266,6 +262,7 @@ useEffect(() => {
     }
   };
 
+  // --- Supprimer channel
   const deleteChannel = async (channelId, channelName) => {
     if (!window.confirm(`Supprimer le channel "${channelName}" ?`)) return;
     try {
@@ -282,6 +279,7 @@ useEffect(() => {
     }
   };
 
+  // --- Sélection des utilisateurs
   const toggleUserSelection = (id) => {
     setSelectedUsers((prev) =>
       prev.includes(id) ? prev.filter((u) => u !== id) : [...prev, id]
