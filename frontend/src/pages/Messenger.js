@@ -47,52 +47,46 @@ export default function Messenger() {
     });
 
     socketRef.current.on("message", (newMessage) => {
-      // Ne pas traiter le message si c'est celui envoyé par ce client
-      if (newMessage.author?._id === userId) return;
+  // Ignorer si c’est ton propre message
+  if (newMessage.author?._id === userId) return;
 
-      setConversations((prevConversations) =>
-        prevConversations.map((conv) => {
-          if (conv._id === newMessage.conversation) {
-            if (conv.messages?.some((msg) => msg._id === newMessage._id)) return conv;
+  setConversations((prevConversations) =>
+    prevConversations.map((conv) => {
+      if (conv._id === newMessage.conversation) {
+        if (conv.messages?.some((msg) => msg._id === newMessage._id)) return conv;
 
-            const updatedConv = {
-              ...conv,
-              messages: [...(conv.messages || []), newMessage],
-            };
+        const updatedConv = {
+          ...conv,
+          messages: [...(conv.messages || []), newMessage],
+        };
 
-            // Mise à jour des messages non lus
-            if (activeConv?._id !== updatedConv._id) {
-              setUnreadCounts((prev) => ({
-                ...prev,
-                [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
-              }));
-            }
+        // Si la conversation active n’est pas celle du message
+        if (activeConv?._id !== updatedConv._id) {
+          setUnreadCounts((prev) => ({
+            ...prev,
+            [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
+          }));
 
-            // Notification + son après le render pour éviter crash mobile
-            setTimeout(() => {
-              if (activeConv?._id !== updatedConv._id) {
-                if ("Notification" in window && Notification.permission === "granted") {
-                  new Notification(
-                    `Nouveau message${
-                      updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
-                    }`,
-                    { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
-                  );
-                }
-                if (!document.hidden) playNotificationSound();
-              }
-            }, 0);
-
-            if (activeConv?._id === updatedConv._id) {
-              setActiveConv(updatedConv);
-            }
-
-            return updatedConv;
+          // Notification + son
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(
+              `Nouveau message${updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""}`,
+              { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
+            );
           }
-          return conv;
-        })
-      );
-    });
+          if (!document.hidden) playNotificationSound();
+        }
+
+        if (activeConv?._id === updatedConv._id) {
+          setActiveConv(updatedConv);
+        }
+
+        return updatedConv;
+      }
+      return conv;
+    })
+  );
+});
 
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();

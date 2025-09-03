@@ -3,20 +3,19 @@ import { logout, getUserInfo } from "../auth";
 import { useState, useEffect } from "react";
 import "../css/Menu.css";
 
-export default function Menu() {
+export default function Menu({ unread = 0 }) { // <- Props "unread"
   const navigate = useNavigate();
   const [open, setOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const userInfo = getUserInfo();
-  const role = userInfo?.role || "user"; // si pas défini = "user"
+  const role = userInfo?.role || "user";
 
   const handleLogout = () => {
     logout();
     navigate("/");
   };
 
-  // Détection mobile
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -41,9 +40,11 @@ export default function Menu() {
           <li onClick={() => navigate("/upload")}>📤 Upload</li>
           <li onClick={() => navigate("/summary")}>📑 Summaries</li>
           <li onClick={() => navigate("/profile")}>👤 Profile</li>
-          <li onClick={() => navigate("/messenger")}>💬 Messenger</li>
+          <li onClick={() => navigate("/messenger")}>
+            💬 Messenger
+            {unread > 0 && <span className="menu-badge">{unread}</span>} {/* <- badge */}
+          </li>
 
-          {/* ✅ Visible uniquement pour les admins */}
           {role === "admin" && (
             <>
               <li onClick={() => navigate("/admin-panel")}>🛠️ Admin Panel</li>
