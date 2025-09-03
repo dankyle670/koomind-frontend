@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import "../css/Messenger.css";
 import Menu from "../components/Menu";
-import notificationSoundFile from "../sounds/notification.wav"; // <- modifié en .wav
+import notificationSoundFile from "../sounds/notification.wav";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
@@ -24,13 +24,13 @@ export default function Messenger() {
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const currentRoomRef = useRef(null);
-  const audioRef = useRef(new Audio(notificationSoundFile)); // <- audio unique
+  const audioRef = useRef(new Audio(notificationSoundFile));
   const navigate = useNavigate();
 
   // --- Jouer le son
   const playNotificationSound = () => {
     const audio = audioRef.current;
-    audio.currentTime = 0; // revenir au début du son
+    audio.currentTime = 0;
     audio.play().catch((err) => console.warn("Erreur lecture son:", err));
   };
 
@@ -47,7 +47,8 @@ export default function Messenger() {
     });
 
     socketRef.current.on("message", (newMessage) => {
-      console.log("📨 Message reçu via socket:", newMessage);
+      // Ne pas traiter le message si c'est celui envoyé par ce client
+      if (newMessage.author?._id === userId) return;
 
       setConversations((prevConversations) =>
         prevConversations.map((conv) => {
@@ -59,21 +60,28 @@ export default function Messenger() {
               messages: [...(conv.messages || []), newMessage],
             };
 
+            // Mise à jour des messages non lus
             if (activeConv?._id !== updatedConv._id) {
-              playNotificationSound();
-              if (Notification.permission === "granted") {
-                new Notification(
-                  `Nouveau message${
-                    updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
-                  }`,
-                  { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
-                );
-              }
               setUnreadCounts((prev) => ({
                 ...prev,
                 [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
               }));
             }
+
+            // Notification + son après le render pour éviter crash mobile
+            setTimeout(() => {
+              if (activeConv?._id !== updatedConv._id) {
+                if ("Notification" in window && Notification.permission === "granted") {
+                  new Notification(
+                    `Nouveau message${
+                      updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
+                    }`,
+                    { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
+                  );
+                }
+                if (!document.hidden) playNotificationSound();
+              }
+            }, 0);
 
             if (activeConv?._id === updatedConv._id) {
               setActiveConv(updatedConv);
