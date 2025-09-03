@@ -34,22 +34,17 @@ export default function Messenger() {
     audio.play().catch((err) => console.warn("Erreur lecture son:", err));
   };
 
-  // --- Initialisation socket une seule fois
+  // --- Initialisation socket (une seule fois)
   useEffect(() => {
     if (!getToken()) return;
 
-    socketRef.current = io(SOCKET_URL, {
-      auth: { token: getToken() },
-    });
+    socketRef.current = io(SOCKET_URL, { auth: { token: getToken() } });
 
     socketRef.current.on("connect", () => {
       console.log("✅ Socket connecté:", socketRef.current.id);
     });
 
     socketRef.current.on("message", (newMessage) => {
-      // Ignorer si c’est ton propre message
-      if (newMessage.author?._id === userId) return;
-
       setConversations((prevConversations) =>
         prevConversations.map((conv) => {
           if (conv._id === newMessage.conversation) {
@@ -60,29 +55,35 @@ export default function Messenger() {
               messages: [...(conv.messages || []), newMessage],
             };
 
-            // Si ce n’est pas la conversation active, augmenter le compteur
-            if (activeConv?._id !== updatedConv._id) {
-              setUnreadCounts((prev) => ({
-                ...prev,
-                [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
-              }));
-
-              // Notifications
-              if ("Notification" in window && Notification.permission === "granted") {
-                new Notification(
-                  `Nouveau message${
-                    updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
-                  }`,
-                  { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
-                );
+            // Mettre à jour activeConv si nécessaire
+            setActiveConv((prevActive) => {
+              if (prevActive?._id === updatedConv._id) {
+                return updatedConv;
               }
-              if (!document.hidden) playNotificationSound();
-            }
+              return prevActive;
+            });
 
-            // Si conversation active, mettre à jour directement
-            if (activeConv?._id === updatedConv._id) {
-              setActiveConv(updatedConv);
-            }
+            // Si ce n’est pas la conversation active, incrémenter compteur + notifications
+            setUnreadCounts((prev) => {
+              if (activeConv?._id !== updatedConv._id) {
+                // Notifications
+                if ("Notification" in window && Notification.permission === "granted") {
+                  new Notification(
+                    `Nouveau message${
+                      updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
+                    }`,
+                    { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
+                  );
+                }
+                playNotificationSound();
+
+                return {
+                  ...prev,
+                  [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
+                };
+              }
+              return prev;
+            });
 
             return updatedConv;
           }
@@ -98,7 +99,7 @@ export default function Messenger() {
     return () => {
       socketRef.current.disconnect();
     };
-  }, [activeConv, userId]);
+  }, []); // ⚠️ Vide pour ne créer qu’une seule fois
 
   // --- Fetch conversations
   useEffect(() => {
@@ -150,6 +151,7 @@ export default function Messenger() {
     socketRef.current.emit("join", activeConv._id);
     currentRoomRef.current = activeConv._id;
 
+    // Reset unread pour la conversation active
     setUnreadCounts((prev) => ({ ...prev, [activeConv._id]: 0 }));
   }, [activeConv]);
 
