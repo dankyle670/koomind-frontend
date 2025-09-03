@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import "../css/Messenger.css";
 import Menu from "../components/Menu";
-import notificationSoundFile from "../sounds/notification.mp3";
+import notificationSoundFile from "../sounds/notification.wav"; // <- modifié en .wav
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
@@ -24,11 +24,13 @@ export default function Messenger() {
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const currentRoomRef = useRef(null);
+  const audioRef = useRef(new Audio(notificationSoundFile)); // <- audio unique
   const navigate = useNavigate();
 
   // --- Jouer le son
   const playNotificationSound = () => {
-    const audio = new Audio(notificationSoundFile);
+    const audio = audioRef.current;
+    audio.currentTime = 0; // revenir au début du son
     audio.play().catch((err) => console.warn("Erreur lecture son:", err));
   };
 
