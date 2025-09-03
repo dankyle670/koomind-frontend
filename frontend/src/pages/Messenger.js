@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import "../css/Messenger.css";
 import Menu from "../components/Menu";
-import notificationSoundFile from "../sounds/notification.wav";
+import notificationSoundFile from "../sounds/notification.mp3";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
@@ -20,18 +20,19 @@ export default function Messenger() {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showPrivateModal, setShowPrivateModal] = useState(false);
-  const [unreadCounts, setUnreadCounts] = useState({}); // compteur unread par conv
+  const [unreadCounts, setUnreadCounts] = useState({});
   const messagesEndRef = useRef(null);
-  const navigate = useNavigate();
   const socketRef = useRef(null);
+  const currentRoomRef = useRef(null);
+  const navigate = useNavigate();
 
-  // --- Fonction pour jouer le son mp3
+  // --- Jouer le son
   const playNotificationSound = () => {
     const audio = new Audio(notificationSoundFile);
     audio.play().catch((err) => console.warn("Erreur lecture son:", err));
   };
 
-  // --- Initialisation Socket.io
+  // --- Initialisation socket une seule fois
   useEffect(() => {
     if (!getToken()) return;
 
@@ -49,7 +50,6 @@ export default function Messenger() {
       setConversations((prevConversations) =>
         prevConversations.map((conv) => {
           if (conv._id === newMessage.conversation) {
-            // déjà existant ?
             if (conv.messages?.some((msg) => msg._id === newMessage._id)) return conv;
 
             const updatedConv = {
@@ -57,31 +57,25 @@ export default function Messenger() {
               messages: [...(conv.messages || []), newMessage],
             };
 
-            // --- Si la conv n’est pas active → notif + badge
             if (activeConv?._id !== updatedConv._id) {
               playNotificationSound();
-
               if (Notification.permission === "granted") {
                 new Notification(
                   `Nouveau message${
                     updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
                   }`,
-                  {
-                    body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}`,
-                  }
+                  { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
                 );
               }
-
               setUnreadCounts((prev) => ({
                 ...prev,
                 [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
               }));
             }
 
-            // maj si conv active
-            setActiveConv((prevActive) =>
-              prevActive?._id === updatedConv._id ? updatedConv : prevActive
-            );
+            if (activeConv?._id === updatedConv._id) {
+              setActiveConv(updatedConv);
+            }
 
             return updatedConv;
           }
@@ -95,11 +89,9 @@ export default function Messenger() {
     }
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      socketRef.current.disconnect();
     };
-  }, [activeConv]);
+  }, []);
 
   // --- Fetch conversations
   useEffect(() => {
@@ -110,9 +102,7 @@ export default function Messenger() {
         const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
-
         if (!res.ok) throw new Error("Unauthorized");
-
         const data = await res.json();
         setConversations(data);
         if (data.length > 0) setActiveConv(data[0]);
@@ -142,13 +132,18 @@ export default function Messenger() {
     fetchUsers();
   }, [userId]);
 
-  // --- Join conv
+  // --- Join/leave rooms
   useEffect(() => {
-    if (activeConv && socketRef.current) {
-      socketRef.current.emit("join", activeConv._id);
-      // reset badge quand on ouvre
-      setUnreadCounts((prev) => ({ ...prev, [activeConv._id]: 0 }));
+    if (!activeConv || !socketRef.current) return;
+
+    if (currentRoomRef.current) {
+      socketRef.current.emit("leave", currentRoomRef.current);
     }
+
+    socketRef.current.emit("join", activeConv._id);
+    currentRoomRef.current = activeConv._id;
+
+    setUnreadCounts((prev) => ({ ...prev, [activeConv._id]: 0 }));
   }, [activeConv]);
 
   // --- Auto scroll
@@ -158,13 +153,11 @@ export default function Messenger() {
 
   const sendMessage = () => {
     if (!input.trim() || !activeConv || !socketRef.current) return;
-
     const messageData = {
       conversation: activeConv._id,
       authorId: userId,
       text: input.trim(),
     };
-
     socketRef.current.emit("message", messageData);
     setInput("");
   };
@@ -174,7 +167,6 @@ export default function Messenger() {
       alert("Veuillez saisir un nom et sélectionner au moins un utilisateur !");
       return;
     }
-
     try {
       const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
         method: "POST",
@@ -188,14 +180,11 @@ export default function Messenger() {
           participants: selectedUsers,
         }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Error creating channel");
-
       setConversations([...conversations, data]);
       setActiveConv(data);
       socketRef.current?.emit("join", data._id);
-
       setNewConvName("");
       setSelectedUsers([]);
       setShowChannelModal(false);
@@ -207,7 +196,6 @@ export default function Messenger() {
 
   const createPrivateConversation = async () => {
     if (!selectedUser) return;
-
     try {
       const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
         method: "POST",
@@ -220,17 +208,13 @@ export default function Messenger() {
           participantId: selectedUser,
         }),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Error creating conversation");
-
       if (!conversations.find((c) => c._id === data._id)) {
         setConversations([...conversations, data]);
       }
-
       setActiveConv(data);
       socketRef.current?.emit("join", data._id);
-
       setSelectedUser(null);
       setShowPrivateModal(false);
     } catch (err) {
@@ -241,18 +225,12 @@ export default function Messenger() {
 
   const deleteChannel = async (channelId, channelName) => {
     if (!window.confirm(`Supprimer le channel "${channelName}" ?`)) return;
-
     try {
-      const res = await fetch(
-        `${API_BASE_URL}/messenger/conversations/${channelId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${getToken()}` },
-        }
-      );
-
+      const res = await fetch(`${API_BASE_URL}/messenger/conversations/${channelId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
       if (!res.ok) throw new Error("Impossible de supprimer le channel");
-
       setConversations(conversations.filter((c) => c._id !== channelId));
       if (activeConv?._id === channelId) setActiveConv(null);
     } catch (err) {
@@ -272,7 +250,6 @@ export default function Messenger() {
     (c) => c.type === "private" && c.participants?.some((p) => p._id === userId)
   );
 
-  // --- Compteur global pour badge dans Menu
   const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
 
   return (
@@ -296,7 +273,6 @@ export default function Messenger() {
               </div>
             ))}
           </div>
-
           <h3>👤 Privés</h3>
           <div className="conv-list">
             {privates.map((conv) => (
@@ -315,7 +291,6 @@ export default function Messenger() {
               </div>
             ))}
           </div>
-
           <div className="sidebar-bottom">
             <button className="sidebar-btn" onClick={() => setShowChannelModal(true)}>
               ➕ Nouveau channel
@@ -338,7 +313,6 @@ export default function Messenger() {
                     .join(", ") || "Conversation privée"
               : "Sélectionnez une conversation"}
           </div>
-
           <div className="messenger-messages">
             {activeConv?.messages?.length > 0 ? (
               activeConv.messages.map((msg, index) => (
