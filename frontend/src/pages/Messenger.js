@@ -21,7 +21,6 @@ export default function Messenger() {
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showPrivateModal, setShowPrivateModal] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState({});
-  const [totalUnread, setTotalUnread] = useState(0);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const currentRoomRef = useRef(null);
@@ -66,13 +65,10 @@ export default function Messenger() {
             const isActive = activeConv?._id === updatedConv._id;
             const shouldNotify = !isActive && newMessage.author?._id !== userId;
             if (shouldNotify) {
-              setUnreadCounts((prev) => {
-                const newCounts = {
-                  ...prev,
-                  [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
-                };
-                return newCounts;
-              });
+              setUnreadCounts((prev) => ({
+                ...prev,
+                [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
+              }));
               if ("Notification" in window && Notification.permission === "granted") {
                 new Notification(
                   `Nouveau message${updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""}`,
@@ -96,7 +92,7 @@ export default function Messenger() {
     return () => {
       socketRef.current.disconnect();
     };
-  }, [userId, activeConv]);
+  }, []); // une seule fois
 
   // --- Fetch conversations
   useEffect(() => {
@@ -111,6 +107,7 @@ export default function Messenger() {
         const data = await res.json();
 
         setConversations(data);
+
         if (data.length > 0) setActiveConv(data[0]);
 
         // Calcul des messages non lus
@@ -122,6 +119,15 @@ export default function Messenger() {
             ) || [];
           if (unreadMessages.length > 0) {
             newUnreadCounts[conv._id] = unreadMessages.length;
+            // Notifications pour messages non lus
+            if ("Notification" in window && Notification.permission === "granted") {
+              unreadMessages.forEach((msg) =>
+                new Notification(
+                  `Nouveau message${conv.type === "channel" ? " dans #" + conv.name : ""}`,
+                  { body: `${msg.author?.name || "Utilisateur"}: ${msg.text}` }
+                )
+              );
+            }
           }
         });
         setUnreadCounts(newUnreadCounts);
@@ -134,12 +140,6 @@ export default function Messenger() {
 
     fetchConversations();
   }, [navigate, userId]);
-
-  // --- Mettre à jour le total des unread pour Menu
-  useEffect(() => {
-    const total = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
-    setTotalUnread(total);
-  }, [unreadCounts]);
 
   // --- Fetch utilisateurs
   useEffect(() => {
@@ -291,10 +291,13 @@ export default function Messenger() {
     (c) => c.type === "private" && c.participants?.some((p) => p._id === userId)
   );
 
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+
   return (
     <>
       <Menu unread={totalUnread} />
       <div className="messenger-container">
+        {/* Sidebar */}
         <div className="messenger-sidebar">
           <h3>📢 Channels</h3>
           <div className="conv-list">
@@ -302,18 +305,15 @@ export default function Messenger() {
               <div
                 key={conv._id}
                 className={`conv-item ${conv._id === activeConv?._id ? "active" : ""}`}
+                onClick={() => setActiveConv(conv)}
               >
-                <span onClick={() => setActiveConv(conv)}># {conv.name}</span>
+                <span># {conv.name}</span>
                 {unreadCounts[conv._id] > 0 && (
                   <span className="badge">{unreadCounts[conv._id]}</span>
                 )}
-                <button className="delete-btn" onClick={() => deleteChannel(conv._id, conv.name)}>
-                  ❌
-                </button>
               </div>
             ))}
           </div>
-
           <h3>👤 Privés</h3>
           <div className="conv-list">
             {privates.map((conv) => (
@@ -332,7 +332,6 @@ export default function Messenger() {
               </div>
             ))}
           </div>
-
           <div className="sidebar-bottom">
             <button className="sidebar-btn" onClick={() => setShowChannelModal(true)}>
               ➕ Nouveau channel
@@ -343,6 +342,7 @@ export default function Messenger() {
           </div>
         </div>
 
+        {/* Chat principal */}
         <div className="messenger-main">
           <div className="messenger-header">
             {activeConv
@@ -354,7 +354,6 @@ export default function Messenger() {
                     .join(", ") || "Conversation privée"
               : "Sélectionnez une conversation"}
           </div>
-
           <div className="messenger-messages">
             {activeConv?.messages?.length > 0 ? (
               activeConv.messages.map((msg, index) => (
