@@ -47,46 +47,49 @@ export default function Messenger() {
     });
 
     socketRef.current.on("message", (newMessage) => {
-  // Ignorer si c’est ton propre message
-  if (newMessage.author?._id === userId) return;
+      // Ignorer si c’est ton propre message
+      if (newMessage.author?._id === userId) return;
 
-  setConversations((prevConversations) =>
-    prevConversations.map((conv) => {
-      if (conv._id === newMessage.conversation) {
-        if (conv.messages?.some((msg) => msg._id === newMessage._id)) return conv;
+      setConversations((prevConversations) =>
+        prevConversations.map((conv) => {
+          if (conv._id === newMessage.conversation) {
+            if (conv.messages?.some((msg) => msg._id === newMessage._id)) return conv;
 
-        const updatedConv = {
-          ...conv,
-          messages: [...(conv.messages || []), newMessage],
-        };
+            const updatedConv = {
+              ...conv,
+              messages: [...(conv.messages || []), newMessage],
+            };
 
-        // Si la conversation active n’est pas celle du message
-        if (activeConv?._id !== updatedConv._id) {
-          setUnreadCounts((prev) => ({
-            ...prev,
-            [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
-          }));
+            // Si ce n’est pas la conversation active, augmenter le compteur
+            if (activeConv?._id !== updatedConv._id) {
+              setUnreadCounts((prev) => ({
+                ...prev,
+                [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
+              }));
 
-          // Notification + son
-          if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(
-              `Nouveau message${updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""}`,
-              { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
-            );
+              // Notifications
+              if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(
+                  `Nouveau message${
+                    updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
+                  }`,
+                  { body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}` }
+                );
+              }
+              if (!document.hidden) playNotificationSound();
+            }
+
+            // Si conversation active, mettre à jour directement
+            if (activeConv?._id === updatedConv._id) {
+              setActiveConv(updatedConv);
+            }
+
+            return updatedConv;
           }
-          if (!document.hidden) playNotificationSound();
-        }
-
-        if (activeConv?._id === updatedConv._id) {
-          setActiveConv(updatedConv);
-        }
-
-        return updatedConv;
-      }
-      return conv;
-    })
-  );
-});
+          return conv;
+        })
+      );
+    });
 
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -95,7 +98,7 @@ export default function Messenger() {
     return () => {
       socketRef.current.disconnect();
     };
-  }, []);
+  }, [activeConv, userId]);
 
   // --- Fetch conversations
   useEffect(() => {
@@ -155,17 +158,40 @@ export default function Messenger() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConv?.messages]);
 
+  // --- ENVOI MESSAGE
   const sendMessage = () => {
     if (!input.trim() || !activeConv || !socketRef.current) return;
+
     const messageData = {
+      _id: Math.random().toString(36).substr(2, 9), // id temporaire
       conversation: activeConv._id,
+      author: { _id: userId, name: getUserInfo().name },
       authorId: userId,
       text: input.trim(),
+      createdAt: new Date().toISOString(),
     };
+
+    // Envoyer via socket
     socketRef.current.emit("message", messageData);
+
+    // Ajouter localement pour affichage instantané
+    setActiveConv((prev) => ({
+      ...prev,
+      messages: [...(prev.messages || []), messageData],
+    }));
+
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv._id === activeConv._id
+          ? { ...conv, messages: [...(conv.messages || []), messageData] }
+          : conv
+      )
+    );
+
     setInput("");
   };
 
+  // --- CREATE CHANNEL / PRIVATE conversation
   const createChannel = async () => {
     if (!newConvName.trim() || selectedUsers.length === 0) {
       alert("Veuillez saisir un nom et sélectionner au moins un utilisateur !");
