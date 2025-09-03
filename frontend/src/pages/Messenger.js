@@ -102,27 +102,53 @@ export default function Messenger() {
   }, []); // ⚠️ Vide pour ne créer qu’une seule fois
 
   // --- Fetch conversations
-  useEffect(() => {
-    if (!getToken()) return navigate("/login");
+useEffect(() => {
+  if (!getToken()) return navigate("/login");
 
-    const fetchConversations = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
-          headers: { Authorization: `Bearer ${getToken()}` },
-        });
-        if (!res.ok) throw new Error("Unauthorized");
-        const data = await res.json();
-        setConversations(data);
-        if (data.length > 0) setActiveConv(data[0]);
-      } catch (err) {
-        console.error("❌ Erreur fetch conversations:", err);
-        logout();
-        navigate("/login");
-      }
-    };
+  const fetchConversations = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) throw new Error("Unauthorized");
+      const data = await res.json();
 
-    fetchConversations();
-  }, [navigate]);
+      // Mettre à jour conversations
+      setConversations(data);
+
+      // Mettre la première conversation active
+      if (data.length > 0) setActiveConv(data[0]);
+
+      // Mettre à jour les unreadCounts et notifications pour messages manquants
+      const newUnreadCounts = {};
+      data.forEach((conv) => {
+        const unreadMessages = conv.messages?.filter(
+          (msg) => !msg.read && msg.author?._id !== userId
+        ) || [];
+        if (unreadMessages.length > 0) {
+          newUnreadCounts[conv._id] = unreadMessages.length;
+
+          // Notifications
+          if ("Notification" in window && Notification.permission === "granted") {
+            unreadMessages.forEach((msg) =>
+              new Notification(
+                `Nouveau message${conv.type === "channel" ? " dans #" + conv.name : ""}`,
+                { body: `${msg.author?.name || "Utilisateur"}: ${msg.text}` }
+              )
+            );
+          }
+        }
+      });
+      setUnreadCounts(newUnreadCounts);
+    } catch (err) {
+      console.error("❌ Erreur fetch conversations:", err);
+      logout();
+      navigate("/login");
+    }
+  };
+
+  fetchConversations();
+}, [navigate, userId]);
 
   // --- Fetch users
   useEffect(() => {
