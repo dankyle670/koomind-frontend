@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import "../css/Messenger.css";
 import Menu from "../components/Menu";
+import notificationSoundFile from "../sounds/notification.wav";
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
@@ -19,26 +20,21 @@ export default function Messenger() {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [showPrivateModal, setShowPrivateModal] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState({}); // compteur unread par conv
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   const socketRef = useRef(null);
 
-  // --- Fonction pour jouer un bip simple (Web Audio API)
+  // --- Fonction pour jouer le son mp3
   const playNotificationSound = () => {
-    const context = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = context.createOscillator();
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(440, context.currentTime);
-    oscillator.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.1);
+    const audio = new Audio(notificationSoundFile);
+    audio.play().catch((err) => console.warn("Erreur lecture son:", err));
   };
 
   // --- Initialisation Socket.io
   useEffect(() => {
     if (!getToken()) return;
 
-    console.log("🔗 Initialisation Socket.io...");
     socketRef.current = io(SOCKET_URL, {
       auth: { token: getToken() },
     });
@@ -53,7 +49,7 @@ export default function Messenger() {
       setConversations((prevConversations) =>
         prevConversations.map((conv) => {
           if (conv._id === newMessage.conversation) {
-            // --- Si le message existe déjà, on ne fait rien
+            // déjà existant ?
             if (conv.messages?.some((msg) => msg._id === newMessage._id)) return conv;
 
             const updatedConv = {
@@ -61,20 +57,28 @@ export default function Messenger() {
               messages: [...(conv.messages || []), newMessage],
             };
 
-            // --- Notification si ce n'est pas la conversation active
+            // --- Si la conv n’est pas active → notif + badge
             if (activeConv?._id !== updatedConv._id) {
               playNotificationSound();
+
               if (Notification.permission === "granted") {
                 new Notification(
-                  `Nouveau message${updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""}`,
+                  `Nouveau message${
+                    updatedConv.type === "channel" ? " dans #" + updatedConv.name : ""
+                  }`,
                   {
                     body: `${newMessage.author?.name || "Utilisateur"}: ${newMessage.text}`,
                   }
                 );
               }
+
+              setUnreadCounts((prev) => ({
+                ...prev,
+                [updatedConv._id]: (prev[updatedConv._id] || 0) + 1,
+              }));
             }
 
-            // --- Mettre à jour activeConv si c'est la conversation active
+            // maj si conv active
             setActiveConv((prevActive) =>
               prevActive?._id === updatedConv._id ? updatedConv : prevActive
             );
@@ -86,30 +90,23 @@ export default function Messenger() {
       );
     });
 
-    socketRef.current.on("error", (error) => {
-      console.error("❌ Socket error:", error);
-    });
-
-    // --- Demande de permission notification
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
 
     return () => {
       if (socketRef.current) {
-        console.log("🔌 Déconnexion socket");
         socketRef.current.disconnect();
       }
     };
   }, [activeConv]);
 
-  // --- Fetch conversations au chargement
+  // --- Fetch conversations
   useEffect(() => {
     if (!getToken()) return navigate("/login");
 
     const fetchConversations = async () => {
       try {
-        console.log("🔄 Fetch conversations...");
         const res = await fetch(`${API_BASE_URL}/messenger/conversations`, {
           headers: { Authorization: `Bearer ${getToken()}` },
         });
@@ -145,20 +142,20 @@ export default function Messenger() {
     fetchUsers();
   }, [userId]);
 
-  // --- Rejoindre conversation active
+  // --- Join conv
   useEffect(() => {
     if (activeConv && socketRef.current) {
-      console.log("📍 Join room:", activeConv._id);
       socketRef.current.emit("join", activeConv._id);
+      // reset badge quand on ouvre
+      setUnreadCounts((prev) => ({ ...prev, [activeConv._id]: 0 }));
     }
   }, [activeConv]);
 
-  // --- Auto-scroll
+  // --- Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeConv?.messages]);
 
-  // --- Envoyer un message
   const sendMessage = () => {
     if (!input.trim() || !activeConv || !socketRef.current) return;
 
@@ -275,9 +272,12 @@ export default function Messenger() {
     (c) => c.type === "private" && c.participants?.some((p) => p._id === userId)
   );
 
+  // --- Compteur global pour badge dans Menu
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
+
   return (
     <>
-      <Menu />
+      <Menu unread={totalUnread} />
       <div className="messenger-container">
         {/* Sidebar */}
         <div className="messenger-sidebar">
@@ -290,18 +290,9 @@ export default function Messenger() {
                 onClick={() => setActiveConv(conv)}
               >
                 <span># {conv.name}</span>
-                <span style={{ fontSize: "10px", color: "#666" }}>
-                  ({conv.messages?.length || 0})
-                </span>
-                <button
-                  className="delete-channel-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteChannel(conv._id, conv.name);
-                  }}
-                >
-                  🗑
-                </button>
+                {unreadCounts[conv._id] > 0 && (
+                  <span className="badge">{unreadCounts[conv._id]}</span>
+                )}
               </div>
             ))}
           </div>
@@ -318,9 +309,9 @@ export default function Messenger() {
                   ?.filter((p) => p._id !== userId)
                   .map((p) => p.name)
                   .join(", ") || "Conversation privée"}
-                <span style={{ fontSize: "10px", color: "#666" }}>
-                  ({conv.messages?.length || 0})
-                </span>
+                {unreadCounts[conv._id] > 0 && (
+                  <span className="badge">{unreadCounts[conv._id]}</span>
+                )}
               </div>
             ))}
           </div>

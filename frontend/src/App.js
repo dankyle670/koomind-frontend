@@ -1,3 +1,4 @@
+// src/App.js
 import { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useNavigate } from "react-router-dom";
 import Login from "./pages/Login";
@@ -45,7 +46,10 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Route login */}
       <Route path="/" element={<Login />} />
+
+      {/* Toutes les autres routes sont gérées côté React */}
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/upload" element={<Upload />} />
       <Route path="/summary" element={<Summary />} />
@@ -54,6 +58,9 @@ function AppRoutes() {
       <Route path="/admin-panel" element={<AdminPanel />} />
       <Route path="/convert" element={<Convert />} />
       <Route path="/messenger" element={<Messenger />} />
+
+      {/* Catch-all route pour éviter 404 sur actualisation */}
+      <Route path="/*" element={<Dashboard />} />
     </Routes>
   );
 }
